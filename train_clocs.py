@@ -1,4 +1,4 @@
-''' Train MCP
+''' Train CLOCS
 '''
 import os
 import argparse

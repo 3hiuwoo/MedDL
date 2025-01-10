@@ -108,6 +108,6 @@ def cmsmlc_split(x, y):
     batch_size = x.shape[0]
     assert length % 2 == 0
     
-    x = x.reshape(batch_size, 2, int(length/2), -1)
+    x = x.transpose(0, 2, 1).reshape(batch_size, -1, int(length/2), 1)
     
     return x, y

@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 from tqdm import tqdm
 from datetime import datetime
 from torch import nn
@@ -8,6 +7,7 @@ from model.encoder import TSEncoder, CLEncoder
 from model.cl_loss import id_contrastive_loss
 from utils import shuffle_feature_label
 from utils import MyBatchSampler
+
 
 class CLOCS:
     '''The CLOCS model.
@@ -79,6 +79,9 @@ class CLOCS:
         '''
         assert X.ndim == 4
         assert y.shape[1] == 3
+        assert X.shape[-1] == 1
+        print(f'=> Number of views: {X.shape[1]}')
+        
         # Shuffle the training set for contrastive learning pretraining.
         X, y = shuffle_feature_label(X, y, shuffle_function=shuffle_function, batch_size=self.batch_size)
 
@@ -98,7 +101,6 @@ class CLOCS:
         optimizer = torch.optim.AdamW(self._net.parameters(), lr=self.lr)
         
         epoch_loss_list = []
-   
         start_time = datetime.now()           
         for epoch in range(epochs):
             cum_loss = 0
@@ -132,45 +134,6 @@ class CLOCS:
         return epoch_loss_list
     
     
-    def encode(self, X, mask=None, batch_size=None):
-        ''' Compute representations using the model.
-        
-        Args:
-            X (numpy.ndarray): The input data. This should have a shape of (n_samples, sample_timestamps, features).
-            mask (str): The mask used by encoder can be specified with this parameter. Check masking functions in encoder.py.
-            batch_size (Union[int, NoneType]): The batch size used for inference. If not specified, this would be the same batch size as training.
-            
-        Returns:
-            repr: The representations for data.
-        '''
-        assert self.net is not None, 'please train or load a net first'
-        assert X.ndim == 3
-        if batch_size is None:
-            batch_size = self.batch_size
-        # n_samples, ts_l, _ = data.shape
-
-        org_training = self.net.training
-        self.net.eval()
-        
-        dataset = TensorDataset(torch.from_numpy(X).to(torch.float))
-        loader = DataLoader(dataset, batch_size=batch_size)
-        
-        with torch.no_grad():
-            output = []
-            for batch in loader:
-                x = batch[0].to(self.device)
-                # print(next(self.net.parameters()).device)
-                # print(x.device)
-                out = self.net(x, mask, pool=True)
-                output.append(out)
-                
-            output = torch.cat(output, dim=0)
-            
-        self.net.train(org_training)
-        # return output.numpy()
-        return output.cpu().numpy()
-
-
     def save(self, fn):
         '''Save the model to a file.
         
