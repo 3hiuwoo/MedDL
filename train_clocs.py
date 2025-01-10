@@ -69,7 +69,6 @@ def main():
         y_train,
         shuffle_function=args.shuffle,
         masks=args.masks,
-        factors=args.factors,
         epochs=args.epochs,
         verbose=args.verbose
         )
