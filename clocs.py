@@ -54,7 +54,6 @@ class CLOCS:
         if device == torch.device('cuda') and self.multi_gpu:
             # self.net_q = nn.DataParallel(self.net_q, device_ids=gpu_idx_list)
             self._net = nn.DataParallel(self._net)
-            self.net_k = nn.DataParallel(self.net_k)
         self._net.to(device)
         # stochastic weight averaging
         # https://pytorch.org/blog/pytorch-1.6-now-includes-stochastic-weight-averaging/
@@ -96,7 +95,7 @@ class CLOCS:
             my_sampler = MyBatchSampler(range(len(train_dataset)), batch_size=self.batch_size, drop_last=True)
             train_loader = DataLoader(train_dataset, batch_sampler=my_sampler)
         
-        optimizer = torch.optim.AdamW(self.net_q.parameters(), lr=self.lr)
+        optimizer = torch.optim.AdamW(self._net.parameters(), lr=self.lr)
         
         epoch_loss_list = []
    
