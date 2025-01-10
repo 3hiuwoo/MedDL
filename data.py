@@ -11,7 +11,7 @@ def load_data(root='data', name='chapman', length=None, overlap=0, norm=True, sh
     '''
     if name == 'chapman':
         dir = os.path.join(root, name)
-        return load_chapman(dir, length, overlap, norm, shuffle)
+        return load_chapman(dir, length, overlap, norm, shuffle, task)
     else:
         raise ValueError(f'Unknown dataset name: {name}')
     
