@@ -55,7 +55,6 @@ def main():
         input_dims=X_train.shape[-1],
         output_dims=args.output_dim,
         hidden_dims=args.hidden_dim,
-        length=args.length,
         depth=args.depth,
         device=device,
         lr=args.lr,
