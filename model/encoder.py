@@ -175,7 +175,7 @@ class CLEncoder(nn.Module):
     def forward(self, x, masks=None):
         ''' Forward Pass on Batch of Inputs 
         Args:
-            x (torch.Tensor): inputs with N views (BxNxS)
+            x (torch.Tensor): inputs with N views (BxNxSxC)
             masks (list): list of mask mode for each view
         Outputs:
             h (torch.Tensor): latent embedding for each of the N views (NxBxH)
@@ -183,7 +183,7 @@ class CLEncoder(nn.Module):
         batch_size = x.shape[0]
         #nsamples = x.shape[2]
         nviews = x.shape[1]
-        x = x.permute(1, 0, 2)  # NxBxS
+        x = x.permute(1, 0, 2, 3)  # NxBxS
         output = torch.concat([self.encoder(x[i], masks[i], pool=True) for i in range(nviews)], dim=0)
             
         return output
