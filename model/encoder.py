@@ -184,7 +184,11 @@ class CLEncoder(nn.Module):
         #nsamples = x.shape[2]
         nviews = x.shape[1]
         x = x.permute(1, 0, 2, 3)  # NxBxS
-        output = torch.concat([self.encoder(x[i], masks[i], pool=True) for i in range(nviews)], dim=0)
+        
+        if masks is not None:
+            output = torch.concat([self.encoder(x[i], masks[i], pool=True) for i in range(nviews)], dim=0)
+        else:
+            output = torch.concat([self.encoder(x[i], pool=True) for i in range(nviews)], dim=0)
             
         return output
     
