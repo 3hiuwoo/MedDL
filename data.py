@@ -86,7 +86,7 @@ def load_chapman(root='data/chapman', length=None, overlap=0, norm=True, shuff=T
     if task == 'cmsc':
         X_train, y_train = cmsc_split(X_train, y_train)
         
-    if task == 'cmsmlc':
+    elif task == 'cmsmlc':
         X_train, y_train = cmsmlc_split(X_train, y_train)    
     
     return X_train, X_val, X_test, y_train, y_val, y_test
@@ -97,7 +97,7 @@ def cmsc_split(x, y):
     nleads = x.shape[-1]
     assert length % 2 == 0
     
-    x = x.transpose(2, 0, 1).reshape(-1, 2, length/2, 1)
+    x = x.transpose(2, 0, 1).reshape(-1, 2, int(length/2), 1)
     y = np.tile(y, (nleads, 1))
     
     return x, y
@@ -108,6 +108,6 @@ def cmsmlc_split(x, y):
     batch_size = x.shape[0]
     assert length % 2 == 0
     
-    x = x.reshape(batch_size, 2, length/2, -1)
+    x = x.reshape(batch_size, 2, int(length/2), -1)
     
     return x, y
