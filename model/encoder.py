@@ -104,7 +104,7 @@ class FTClassifier(nn.Module):
 
 
 class TSEncoder(nn.Module):
-    def __init__(self, input_dims, output_dims, hidden_dims=64, depth=10, mask_mode='binomial'):
+    def __init__(self, input_dims, output_dims, hidden_dims=64, depth=10, mask_mode='all_true'):
         super().__init__()
         self.input_dims = input_dims  # Ci
         self.output_dims = output_dims  # Co
@@ -180,8 +180,8 @@ class CLEncoder(nn.Module):
         Outputs:
             h (torch.Tensor): latent embedding for each of the N views (NxBxH)
         '''
-        batch_size = x.shape[0]
-        #nsamples = x.shape[2]
+        # batch_size = x.shape[0]
+        # nsamples = x.shape[2]
         nviews = x.shape[1]
         x = x.permute(1, 0, 2, 3)  # NxBxS
         

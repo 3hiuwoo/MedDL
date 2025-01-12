@@ -57,20 +57,19 @@ class CLOCS:
         self._net.to(device)
         # stochastic weight averaging
         # https://pytorch.org/blog/pytorch-1.6-now-includes-stochastic-weight-averaging/
-        # self.net = self.net_q
+        # self.net = self._net
         self.net = torch.optim.swa_utils.AveragedModel(self._net)
         self.net.update_parameters(self._net)
         
         
     def fit(self, X, y, shuffle_function='trial', masks=None, epochs=None, verbose=True):
-        ''' Training the MCP model.
+        ''' Training the CLOCS model.
         
         Args:
             X (numpy.ndarray): The training data. It should have a shape of (n_samples, sample_timestamps, features).
             y (numpy.ndarray): The training labels. It should have a shape of (n_samples, 3). The three columns are the label, patient id, and trial id.
             shuffle_func (str): specify the shuffle function.
-            masks (list): A list of masking functions applied (str). [Patient, Trial, Sample, Observation].
-            factors (list): A list of loss factors. [Patient, Trial, Sample, Observation].
+            masks (list): A list of masking functions applied (str).
             epochs (Union[int, NoneType]): The number of epochs. When this reaches, the training stops.
             verbose (bool): Whether to print the training loss after each epoch.
             

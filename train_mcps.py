@@ -1,25 +1,26 @@
-''' Train CLOCS
+''' Train MCPS
 '''
 import os
 import argparse
 import numpy as np
-from clocs import CLOCS
+from mcps import MCPS
 from data import load_data
 from utils import seed_everything, get_device
 
 
-parser = argparse.ArgumentParser(description='CLOCS training')
+parser = argparse.ArgumentParser(description='MCPS training')
 parser.add_argument('--seed', type=int, default=42, help='random seed')
 # for the data
 parser.add_argument('--root', type=str, default='dataset', help='root directory of datasets')
 parser.add_argument('--data', type=str, default='chapman', help='select pretraining dataset')
 parser.add_argument('--length', type=int, default=600, help='length of each sample')
 parser.add_argument('--overlap', type=float, default=0., help='overlap of each sample')
-parser.add_argument('--task', type=str, default='cmsc', help='select to run cmsc/cmsmlc')
-# for the model
 parser.add_argument('--depth', type=int, default=10, help='depth of the encoder')
 parser.add_argument('--hidden_dim', type=int, default=64, help='hidden dimension of the model')
 parser.add_argument('--output_dim', type=int, default=320, help='output dimension of the model')
+parser.add_argument('--momentum', type=float, default=0.999, help='momentum for the model')
+parser.add_argument('--queue_size', type=int, default=16384, help='queue size for the model')
+parser.add_argument('--num_queues', type=int, default=1, help='number of queues for the model')
 parser.add_argument('--masks', type=str, default='all_true', help='masks for the model')
 # for the training
 parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
@@ -35,7 +36,7 @@ parser.add_argument('--verbose', type=int, default=1, help='print loss after eac
 
 args = parser.parse_args()
 
-logdir = os.path.join(args.logdir, f'{args.task}_{args.data}_{args.seed}')
+logdir = os.path.join(args.logdir, f'mcps_{args.data}_{args.seed}')
 if not os.path.exists(logdir):
     os.makedirs(logdir)
 
@@ -43,24 +44,28 @@ def main():
     seed_everything(args.seed)
     print(f'=> Set seed to {args.seed}')
     
-    X_train, _, _, y_train, _, _ = load_data(args.root, args.data, length=args.length, overlap=args.overlap, shuffle=True, task=args.task)
+    X_train, _, _, y_train, _, _ = load_data(args.root, args.data, length=args.length, overlap=args.overlap, shuffle=True, task='cmsc')
     
     device = get_device()
     print(f'=> Running on {device}')
     
-    model = CLOCS(
+    model = MCPS(
         input_dims=X_train.shape[-1],
         output_dims=args.output_dim,
         hidden_dims=args.hidden_dim,
+        length=args.length,
         depth=args.depth,
         device=device,
         lr=args.lr,
         batch_size=args.batch_size,
+        momentum=args.momentum,
+        queue_size=args.queue_size,
+        num_queue=args.num_queues,
         multi_gpu=args.multi_gpu,
         callback_func=pretrain_callback
     )
     
-    print(f'=> Train CLOCS')
+    print(f'=> Train MCPS')
     loss_list = model.fit(
         X_train,
         y_train,
