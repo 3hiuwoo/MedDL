@@ -58,8 +58,8 @@ class CLOCS:
         # stochastic weight averaging
         # https://pytorch.org/blog/pytorch-1.6-now-includes-stochastic-weight-averaging/
         # self.net = self._net
-        self.net = torch.optim.swa_utils.AveragedModel(self._net)
-        self.net.update_parameters(self._net)
+        self.net = torch.optim.swa_utils.AveragedModel(self._net.encoder)
+        self.net.update_parameters(self._net.encoder)
         
         
     def fit(self, X, y, shuffle_function='trial', masks=None, epochs=None, verbose=True):
@@ -114,7 +114,7 @@ class CLOCS:
                 loss = id_contrastive_loss(views, pid)
                 loss.backward()
                 optimizer.step()
-                self.net.update_parameters(self._net)
+                self.net.update_parameters(self._net.encoder)
 
                 cum_loss += loss.item()
            
@@ -139,7 +139,7 @@ class CLOCS:
         Args:
             fn (str): filename.
         '''
-        torch.save(self.net.encoder.state_dict(), fn)
+        torch.save(self.net.state_dict(), fn)
     
     
     def load(self, fn):
@@ -150,4 +150,4 @@ class CLOCS:
         '''
         # state_dict = torch.load(fn, map_location=self.device)
         state_dict = torch.load(fn)
-        self.net.encoder.load_state_dict(state_dict)
+        self.net.load_state_dict(state_dict)
