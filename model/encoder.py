@@ -185,10 +185,7 @@ class CLEncoder(nn.Module):
         nviews = x.shape[1]
         x = x.permute(1, 0, 2, 3)  # NxBxS
         
-        if masks is not None:
-            output = torch.stack([self.encoder(x[i], masks[i], pool=True) for i in range(nviews)], dim=0)
-        else:
-            output = torch.stack([self.encoder(x[i], pool=True) for i in range(nviews)], dim=0)
+        output = torch.stack([self.encoder(x[i], mask=masks, pool=True) for i in range(nviews)], dim=0)
             
         return output
     
