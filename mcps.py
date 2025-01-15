@@ -105,7 +105,7 @@ class MCPS:
             Returns:
                 epoch_loss_list: a list containing the training losses on each epoch.
             '''
-            assert X.ndim == 3
+            assert X.ndim == 4
             assert y.shape[1] == 3
             # Shuffle the training set for contrastive learning pretraining.
             X, y = shuffle_feature_label(X, y, shuffle_function=shuffle_function, batch_size=self.batch_size)
