@@ -133,7 +133,7 @@ class MCPS:
                 for x, y in tqdm(train_loader, desc=f'=> Epoch {epoch+1}', leave=False):
                     # count by iterations
                     x = x.to(self.device)
-                    x = x.permute(1, 0, x.shape[2], x.shape[3])
+                    x = x.permute(1, 0, 2, 3)
                     x1, x2 = x[0], x[1]
                     pid = y[:, 1]  # patient id
                     
