@@ -159,6 +159,8 @@ class MCPS:
                     self.net.update_parameters(self.net_q)
 
                     cum_loss += loss.item()
+                    
+                    self._dequeue_and_enqueue(k, pid)
             
                 cum_loss /= len(train_loader)
                 epoch_loss_list.append(cum_loss)
@@ -169,8 +171,6 @@ class MCPS:
                 if self.callback_func is not None:
                     self.callback_func(self, epoch)
                     
-                self._dequeue_and_enqueue(k, pid)
-            
             end_time = datetime.now()
             print(f'Training finished in {end_time - start_time}')
                 
