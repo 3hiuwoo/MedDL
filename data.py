@@ -80,8 +80,9 @@ def load_chapman(root='data/chapman', length=None, overlap=0, norm=True, shuff=T
         # X_test, y_test = segment(X_test, y_test, split)
         
         X_train, y_train = split_data_label(X_train,y_train, sample_timestamps=length, overlapping=overlap)
-        X_val, y_val = split_data_label(X_val,y_val, sample_timestamps=length, overlapping=overlap)
-        X_test, y_test = split_data_label(X_test,y_test, sample_timestamps=length, overlapping=overlap)
+        # no neighbor contrast in validation and test set
+        X_val, y_val = split_data_label(X_val,y_val, sample_timestamps=length//2, overlapping=overlap)
+        X_test, y_test = split_data_label(X_test,y_test, sample_timestamps=length//2, overlapping=overlap)
         
     if task == 'cmsc':
         X_train, y_train = cmsc_split(X_train, y_train)
