@@ -3,7 +3,7 @@
 import os
 import argparse
 import numpy as np
-from mcps import MCPS
+from mcl import MCL
 from data import load_data
 from utils import seed_everything, get_device
 
@@ -49,7 +49,7 @@ def main():
     device = get_device()
     print(f'=> Running on {device}')
     
-    model = MCPS(
+    model = MCL(
         input_dims=X_train.shape[-1],
         output_dims=args.output_dim,
         hidden_dims=args.hidden_dim,

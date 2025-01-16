@@ -3,27 +3,24 @@ from tqdm import tqdm
 from datetime import datetime
 from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
-from model.encoder import TSEncoder, CLEncoder
+from model.encoder import TSEncoder
 from model.cl_loss import id_momentum_loss
-from utils import shuffle_feature_label
-from utils import MyBatchSampler
+from utils import shuffle_feature_label, MyBatchSampler
 
 
-class MCPS:
+class MCL:
     '''The Momentum CMSC model.
     
     Args:
         input_dims (int): The input dimension. For a uni-variate time series, this should be set to 1.
         output_dims (int): The representation dimension.
         hidden_dims (int): The hidden dimension of the encoder.
-        length (int): The length of the representation/series.
         depth (int): The number of hidden residual blocks in the encoder.
         device (str): The gpu used for training and inference.
         lr (float): The learning rate.
         batch_size (int): The batch size of samples.
         momentum (float): The momentum used for the key encoder.
         queue_size (int): The size of the queue.
-        num_queue (int): The number of queues.
         multi_gpu (bool): A flag to indicate whether using multiple gpus
         callback_func (Union[Callable, NoneType]): A callback function that would be called after each epoch.
     '''
@@ -38,7 +35,6 @@ class MCPS:
         batch_size=256,
         momentum=0.999,
         queue_size=16384,
-        num_queue=1,
         multi_gpu=True,
         callback_func=None
     ):
@@ -56,8 +52,6 @@ class MCPS:
         
         self.momentum = momentum
         self.queue_size = queue_size
-        # todo: multiple queues
-        self.num_queue = num_queue
         
         self.net_q = TSEncoder(input_dims=input_dims, output_dims=output_dims, hidden_dims=hidden_dims, depth=depth)
         self.net_k = TSEncoder(input_dims=input_dims, output_dims=output_dims, hidden_dims=hidden_dims, depth=depth)
