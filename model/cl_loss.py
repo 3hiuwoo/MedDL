@@ -103,6 +103,7 @@ def id_momentum_loss(q, k, queue, id, id_queue):
     loss_triu = -torch.mean(torch.log((triu_elements+eps)/(torch.sum(sim_matrix_exp,1)[rows1]+eps)))
     
     loss = loss_diag + loss_triu
+    
     return loss
     
     
