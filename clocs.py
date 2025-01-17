@@ -62,7 +62,7 @@ class CLOCS:
         self.net.update_parameters(self._net.encoder)
         
         
-    def fit(self, X, y, shuffle_function='trial', masks=None, epochs=None, verbose=True):
+    def fit(self, X, y, shuffle_function='random', masks=None, epochs=None, verbose=True):
         ''' Training the CLOCS model.
         
         Args:

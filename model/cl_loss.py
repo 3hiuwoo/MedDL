@@ -88,8 +88,6 @@ def id_momentum_loss(q, k, queue, id, id_queue):
     loss = 0
     temperature = 0.1
     eps = 1e-12
-    q = F.normalize(q, dim=1)
-    k = F.normalize(k, dim=1)
     batch_sim_matrix = torch.mm(q, k.t()) # B x B
     queue_sim_matrix = torch.mm(q, queue.t()) # B x K
     sim_matrix = torch.cat((batch_sim_matrix, queue_sim_matrix), dim=1) # B x (B+K)
@@ -103,6 +101,7 @@ def id_momentum_loss(q, k, queue, id, id_queue):
     loss_triu = -torch.mean(torch.log((triu_elements+eps)/(torch.sum(sim_matrix_exp,1)[rows1]+eps)))
     
     loss = loss_diag + loss_triu
+    loss /= 2
     
     return loss
     

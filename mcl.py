@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from tqdm import tqdm
 from datetime import datetime
 from torch import nn
@@ -138,11 +139,13 @@ class MCL:
                     
                     # do augmentation and compute representation
                     q = self.net_q(x1, mask=masks)
+                    q = F.normalize(q, dim=1)
                     
                     with torch.no_grad():
                         # shuffle BN
                         idx = torch.randperm(x2.size(0), device=x.device)
                         k = self.net_k(x2[idx], mask=masks)
+                        k = F.normalize(k, dim=1)
                         k = k[torch.argsort(idx)]
 
                     # loss calculation
