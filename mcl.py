@@ -86,7 +86,7 @@ class MCL:
         self.queue_ptr = torch.zeros(1, dtype=torch.long, device=device, requires_grad=False)
         
         
-    def fit(self, X, y, shuffle_function='trial', masks='all_true', epochs=None, verbose=True):
+    def fit(self, X, y, shuffle_function='random', masks='all_true', epochs=None, verbose=True):
             ''' Training the MCPS model.
             
             Args:
