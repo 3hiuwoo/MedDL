@@ -87,7 +87,7 @@ class MCL:
         
         
     def fit(self, X, y, shuffle_function='random', masks='all_true', epochs=None, verbose=True):
-            ''' Training the MCPS model.
+            ''' Training the MCL model.
             
             Args:
                 X (numpy.ndarray): The training data. It should have a shape of (n_samples, sample_timestamps, features).
