@@ -20,7 +20,6 @@ parser.add_argument('--hidden_dim', type=int, default=64, help='hidden dimension
 parser.add_argument('--output_dim', type=int, default=320, help='output dimension of the model')
 parser.add_argument('--momentum', type=float, default=0.999, help='momentum for the model')
 parser.add_argument('--queue_size', type=int, default=16384, help='queue size for the model')
-parser.add_argument('--num_queues', type=int, default=1, help='number of queues for the model')
 parser.add_argument('--masks', type=str, default='all_true', help='masks for the model')
 # for the training
 parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
@@ -59,7 +58,6 @@ def main():
         batch_size=args.batch_size,
         momentum=args.momentum,
         queue_size=args.queue_size,
-        num_queue=args.num_queues,
         multi_gpu=args.multi_gpu,
         callback_func=pretrain_callback
     )
