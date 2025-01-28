@@ -4,12 +4,12 @@ from datetime import datetime
 from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
 from model.encoder import TSEncoder, CLEncoder
-from model.cl_loss import id_contrastive_loss
+from model.cl_loss import xtnet_loss
 from utils import shuffle_feature_label
 from utils import MyBatchSampler
 
-class CLOCS:
-    '''The CLOCS model.
+class SimCLR:
+    '''The SimCLR model.
     
     Args:
         input_dims (int): The input dimension. For a uni-variate time series, this should be set to 1.
@@ -62,7 +62,7 @@ class CLOCS:
         
         
     def fit(self, X, y, shuffle_function='random', masks=None, epochs=None, verbose=True):
-        ''' Training the CLOCS model.
+        ''' Training the SimCLR model.
         
         Args:
             X (numpy.ndarray): The training data. It should have a shape of (n_samples, sample_timestamps, features).
@@ -105,12 +105,11 @@ class CLOCS:
             for x, y in tqdm(train_loader, desc=f'=> Epoch {epoch+1}', leave=False):
                 # count by iterations
                 x = x.to(self.device)
-                pid = y[:, 1]  # patient id
 
                 optimizer.zero_grad()
                 
                 views = self._net(x, masks=masks)
-                loss = id_contrastive_loss(views, pid)
+                loss = xtnet_loss(views[0], views[1])
                 loss.backward()
                 optimizer.step()
                 self.net.update_parameters(self._net.encoder)

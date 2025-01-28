@@ -3,7 +3,6 @@ import torch.nn.functional as F
 import numpy as np
 from itertools import combinations
 
-
 def id_contrastive_loss(views, id):
     ''' Calculate NCE Loss For Latent Embeddings in Batch 
     Args:
@@ -25,8 +24,8 @@ def id_contrastive_loss(views, id):
     temperature = 0.1
     eps = 1e-12
     for combination in view_combinations:
-        view1 = views[combination[0], ...] # B x H
-        view2 = views[combination[1], ...] # B x H
+        view1 = views[combination[0]] # B x H
+        view2 = views[combination[1]] # B x H
         view1 = F.normalize(view1, dim=1)
         view2 = F.normalize(view2, dim=1)
         sim_matrix = torch.mm(view1, view2.transpose(0,1)) # B x B
@@ -104,6 +103,60 @@ def id_momentum_loss(q, k, queue, id, id_queue):
     loss /= 2
     
     return loss
+
+
+def moco_loss(q, k, queue):
+    # compute logits
+    # Einstein sum is more intuitive
+    # positive logits: Nx1
+    l_pos = torch.einsum("nc,nc->n", [q, k]).unsqueeze(-1)
+    # negative logits: NxK
+    l_neg = torch.einsum("nc,ck->nk", [q, queue])
+
+    # logits: Nx(1+K)
+    logits = torch.cat([l_pos, l_neg], dim=1)
+
+    # apply temperature
+    logits /= 0.1
+
+    # labels: positive key indicators
+    labels = torch.zeros(logits.shape[0], dtype=torch.long).cuda()
+    
+    loss = F.cross_entropy(logits, labels)
+    
+    return loss
+
+
+def xtnet_loss(view1, view2):
+    norm1 = view1.norm(dim=1).unsqueeze(0)
+    norm2 = view2.norm(dim=1).unsqueeze(0)
+    sim_matrix = torch.mm(view1, view2.transpose(0,1))
+    norm_matrix = torch.mm(norm1.transpose(0,1), norm2)
+    temperature = 0.1
+    argument = sim_matrix/(norm_matrix*temperature)
+    sim_matrix_exp = torch.exp(argument)
+    
+    self_sim_matrix1 = torch.mm(view1, view1.transpose(0,1))
+    self_norm_matrix1 = torch.mm(norm1.transpose(0,1), norm1)
+    argument = self_sim_matrix1 / (self_norm_matrix1 * temperature)
+    self_sim_matrix_exp1 = torch.exp(argument)
+    self_sim_matrix_off_diagonals1 = torch.triu(self_sim_matrix_exp1, 1) + torch.tril(self_sim_matrix_exp1, -1)
+    
+    self_sim_matrix2 = torch.mm(view2, view2.transpose(0,1))
+    self_norm_matrix2 = torch.mm(norm2.transpose(0,1),norm2)
+    argument = self_sim_matrix2 / (self_norm_matrix2 * temperature)
+    self_sim_matrix_exp2 = torch.exp(argument)
+    self_sim_matrix_off_diagonals2 = torch.triu(self_sim_matrix_exp2, 1) + torch.tril(self_sim_matrix_exp2, -1)
+
+    denominator_loss1 = torch.sum(sim_matrix_exp, 1) + torch.sum(self_sim_matrix_off_diagonals1, 1)
+    denominator_loss2 = torch.sum(sim_matrix_exp, 0) + torch.sum(self_sim_matrix_off_diagonals2, 0)
+    
+    diagonals = torch.diag(sim_matrix_exp)
+    loss_term1 = -torch.mean(torch.log(diagonals/denominator_loss1))
+    loss_term2 = -torch.mean(torch.log(diagonals/denominator_loss2))
+    loss = (loss_term1 + loss_term2) / 2
+    return loss
+    
     
     
         

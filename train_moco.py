@@ -3,18 +3,19 @@
 import os
 import argparse
 import numpy as np
-from mcl import MCL
+from moco import MoCo
 from data import load_data
 from utils import seed_everything, get_device
 
 
-parser = argparse.ArgumentParser(description='MCPS training')
+parser = argparse.ArgumentParser(description='MoCo training')
 parser.add_argument('--seed', type=int, default=42, help='random seed')
 # for the data
 parser.add_argument('--root', type=str, default='dataset', help='root directory of datasets')
 parser.add_argument('--data', type=str, default='chapman', help='select pretraining dataset')
 parser.add_argument('--length', type=int, default=600, help='length of each sample')
 parser.add_argument('--overlap', type=float, default=0., help='overlap of each sample')
+# for the model
 parser.add_argument('--depth', type=int, default=10, help='depth of the encoder')
 parser.add_argument('--hidden_dim', type=int, default=64, help='hidden dimension of the model')
 parser.add_argument('--output_dim', type=int, default=320, help='output dimension of the model')
@@ -48,7 +49,7 @@ def main():
     device = get_device()
     print(f'=> Running on {device}')
     
-    model = MCL(
+    model = MoCo(
         input_dims=X_train.shape[-1],
         output_dims=args.output_dim,
         hidden_dims=args.hidden_dim,
@@ -62,7 +63,7 @@ def main():
         callback_func=pretrain_callback
     )
     
-    print(f'=> Train MCL')
+    print(f'=> Train MoCo')
     loss_list = model.fit(
         X_train,
         y_train,

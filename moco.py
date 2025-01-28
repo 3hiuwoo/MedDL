@@ -5,12 +5,12 @@ from datetime import datetime
 from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
 from model.encoder import TSEncoder
-from model.cl_loss import id_momentum_loss
+from model.cl_loss import moco_loss
 from utils import shuffle_feature_label, MyBatchSampler
 
 
-class MCL:
-    '''The Momentum CMSC model.
+class MoCo:
+    '''The MoCo model.
     
     Args:
         input_dims (int): The input dimension. For a uni-variate time series, this should be set to 1.
@@ -81,8 +81,6 @@ class MCL:
 
         self.queue = torch.randn(queue_size, output_dims, device=device, requires_grad=False)
         self.queue = nn.functional.normalize(self.queue, dim=1)
-        
-        self.id_queue = torch.zeros(queue_size, dtype=torch.long, device=device, requires_grad=False)
         self.queue_ptr = torch.zeros(1, dtype=torch.long, device=device, requires_grad=False)
         
         
@@ -149,7 +147,7 @@ class MCL:
                         k = k[torch.argsort(idx)]
 
                     # loss calculation
-                    loss = id_momentum_loss(q, k, self.queue.clone().detach(), pid, self.id_queue.clone().detach())
+                    loss = moco_loss(q, k, self.queue.clone().detach())
 
                     loss.backward()
                     optimizer.step()
@@ -157,7 +155,7 @@ class MCL:
 
                     cum_loss += loss.item()
                     
-                    self._dequeue_and_enqueue(k, pid)
+                    self._dequeue_and_enqueue(k)
             
                 cum_loss /= len(train_loader)
                 epoch_loss_list.append(cum_loss)
@@ -193,7 +191,6 @@ class MCL:
 
         # replace the keys at ptr (dequeue and enqueue)
         self.queue[ptr : ptr + batch_size, ...] = keys
-        self.id_queue[ptr : ptr + batch_size] = pid
         ptr = (ptr + batch_size) % self.queue_size  # move pointer
 
         self.queue_ptr[0] = ptr
