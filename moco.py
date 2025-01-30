@@ -128,7 +128,6 @@ class MoCo:
                     x = x.to(self.device)
                     x = x.permute(1, 0, 2, 3)
                     x1, x2 = x[0], x[1]
-                    pid = y[:, 1]  # patient id
                     
                     with torch.no_grad():
                         self._momentum_update_key_encoder()
@@ -182,7 +181,7 @@ class MoCo:
             param_k.data = param_k.data * self.momentum + param_q.data * (1.0 - self.momentum)
 
 
-    def _dequeue_and_enqueue(self, keys, pid):
+    def _dequeue_and_enqueue(self, keys):
         # gather keys before updating queue
         batch_size = keys.shape[0]
         

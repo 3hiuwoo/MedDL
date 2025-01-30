@@ -5,31 +5,12 @@ from utils import split_data_label, process_batch_ts
 from sklearn.utils import shuffle
 
 
-def load_data(root='data', name='chapman', length=None, overlap=0, norm=True, shuffle=True, task=None):
+def load_data(root='dataset', name='chapman', length=None, overlap=0, norm=True, shuff=True, task=None):
     '''
-    load correspondent training, validation, and test data and labels
+    load and preprocess data
     '''
-    if name == 'chapman':
-        dir = os.path.join(root, name)
-        return load_chapman(dir, length, overlap, norm, shuffle, task)
-    else:
-        raise ValueError(f'Unknown dataset name: {name}')
-    
-    
-def load_chapman(root='data/chapman', length=None, overlap=0, norm=True, shuff=True, task=None):
-    data_path = os.path.join(root, 'feature')
-    label_path = os.path.join(root, 'label', 'label.npy')
-    
-    labels = np.load(label_path)
-    
-    pids_sb = list(labels[np.where(labels[:, 0]==0)][:, 1])
-    pids_af = list(labels[np.where(labels[:, 0]==1)][:, 1])
-    pids_gsvt = list(labels[np.where(labels[:, 0]==2)][:, 1])
-    pids_sr = list(labels[np.where(labels[:, 0]==3)][:, 1])
-    
-    train_ids = pids_sb[:-500] + pids_af[:-500] + pids_gsvt[:-500] + pids_sr[:-500]
-    valid_ids = pids_sb[-500:-250] + pids_af[-500:-250] + pids_gsvt[-500:-250] + pids_sr[-500:-250]
-    test_ids = pids_sb[-250:] + pids_af[-250:] + pids_gsvt[-250:] + pids_sr[-250:]
+    data_path = os.path.join(root, name, 'feature')
+    labels, train_ids, valid_ids, test_ids = load_label_split(root, name)
     
     filenames = []
     for fn in os.listdir(data_path):
@@ -43,7 +24,7 @@ def load_chapman(root='data/chapman', length=None, overlap=0, norm=True, shuff=T
     test_trials = []
     test_labels = []
     
-    for i, fn in enumerate(tqdm(filenames, desc=f'=> Loading Chapman')):
+    for i, fn in enumerate(tqdm(filenames, desc=f'=> Loading {name}')):
         label = labels[i]
         feature = np.load(os.path.join(data_path, fn))
         for trial in feature:
@@ -79,10 +60,9 @@ def load_chapman(root='data/chapman', length=None, overlap=0, norm=True, shuff=T
         # X_val, y_val = segment(X_val, y_val, split)
         # X_test, y_test = segment(X_test, y_test, split)
         
-        X_train, y_train = split_data_label(X_train,y_train, sample_timestamps=length, overlapping=overlap)
-        # no neighbor contrast in validation and test set
-        X_val, y_val = split_data_label(X_val,y_val, sample_timestamps=length//2, overlapping=overlap)
-        X_test, y_test = split_data_label(X_test,y_test, sample_timestamps=length//2, overlapping=overlap)
+        X_train, y_train = split_data_label(X_train, y_train, sample_timestamps=length, overlapping=overlap)
+        X_val, y_val = split_data_label(X_val, y_val, sample_timestamps=length, overlapping=overlap)
+        X_test, y_test = split_data_label(X_test, y_test, sample_timestamps=length, overlapping=overlap)
         
     if task == 'cmsc':
         X_train, y_train = cmsc_split(X_train, y_train)
@@ -95,6 +75,48 @@ def load_chapman(root='data/chapman', length=None, overlap=0, norm=True, shuff=T
     
     return X_train, X_val, X_test, y_train, y_val, y_test
 
+
+def load_label_split(root='dataset', name='chapman'):
+    '''
+    load labels for dataset and split information
+    '''
+    label_path = os.path.join(root, name, 'label', 'label.npy')
+    labels = np.load(label_path)
+    
+    if name == 'chapman':
+        pids_sb = list(labels[np.where(labels[:, 0]==0)][:, 1])
+        pids_af = list(labels[np.where(labels[:, 0]==1)][:, 1])
+        pids_gsvt = list(labels[np.where(labels[:, 0]==2)][:, 1])
+        pids_sr = list(labels[np.where(labels[:, 0]==3)][:, 1])
+        
+        train_ids = pids_sb[:-500] + pids_af[:-500] + pids_gsvt[:-500] + pids_sr[:-500]
+        val_ids = pids_sb[-500:-250] + pids_af[-500:-250] + pids_gsvt[-500:-250] + pids_sr[-500:-250]
+        test_ids = pids_sb[-250:] + pids_af[-250:] + pids_gsvt[-250:] + pids_sr[-250:]
+        
+    elif name == 'ptb':
+        pids_neg = list(labels[np.where(labels[:, 0]==0)][:, 1])
+        pids_pos = list(labels[np.where(labels[:, 0]==1)][:, 1])
+        
+        train_ids = pids_neg[:-14] + pids_pos[:-42]  # specify patient ID for training, validation, and test set
+        val_ids = pids_neg[-14:-7] + pids_pos[-42:-21]   # 28 patients, 7 healthy and 21 positive
+        test_ids = pids_neg[-7:] + pids_pos[-21:]  # # 28 patients, 7 healthy and 21 positive
+        
+    elif name == 'ptbxl':
+        pids_norm = list(labels[np.where(labels[:, 0]==0)][:, 1])
+        pids_mi = list(labels[np.where(labels[:, 0]==1)][:, 1])
+        pids_sttc = list(labels[np.where(labels[:, 0]==2)][:, 1])
+        pids_cd = list(labels[np.where(labels[:, 0]==3)][:, 1])
+        pids_hyp = list(labels[np.where(labels[:, 0]==3)][:, 1])
+        
+        train_ids = pids_norm[:-1200] + pids_mi[:-600] + pids_sttc[:-600] + pids_cd[:-400] + pids_hyp[:-200]
+        val_ids = pids_norm[-1200:-600] + pids_mi[-600:-300] + pids_sttc[-600:-300] + pids_cd[-400:-200] + pids_hyp[-200:-100]
+        test_ids = pids_norm[-600:] + pids_mi[-300:] + pids_sttc[-300:] + pids_cd[-200:] + pids_hyp[-100:]
+        
+    else:
+        raise ValueError(f'Unknown dataset: {name}')
+        
+    return labels, train_ids, val_ids, test_ids
+        
 
 def cmsc_split(x, y):
     length = x.shape[1]
