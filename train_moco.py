@@ -13,7 +13,7 @@ parser.add_argument('--seed', type=int, default=42, help='random seed')
 # for the data
 parser.add_argument('--root', type=str, default='dataset', help='root directory of datasets')
 parser.add_argument('--data', type=str, default='chapman', help='select pretraining dataset')
-parser.add_argument('--length', type=int, default=600, help='length of each sample')
+parser.add_argument('--length', type=int, default=300, help='length of each sample')
 parser.add_argument('--overlap', type=float, default=0., help='overlap of each sample')
 # for the model
 parser.add_argument('--depth', type=int, default=10, help='depth of the encoder')
@@ -44,7 +44,7 @@ def main():
     seed_everything(args.seed)
     print(f'=> Set seed to {args.seed}')
     
-    X_train, _, _, y_train, _, _ = load_data(args.root, args.data, length=args.length, overlap=args.overlap, shuffle=True, task='cmsc')
+    X_train, _, _, y_train, _, _ = load_data(args.root, args.data, length=args.length, overlap=args.overlap, shuff=True)
     
     device = get_device()
     print(f'=> Running on {device}')
