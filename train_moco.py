@@ -36,7 +36,7 @@ parser.add_argument('--verbose', type=int, default=1, help='print loss after eac
 
 args = parser.parse_args()
 
-logdir = os.path.join(args.logdir, f'mcl_{args.data}_{args.seed}')
+logdir = os.path.join(args.logdir, f'moco_{args.data}_{args.seed}')
 if not os.path.exists(logdir):
     os.makedirs(logdir)
 
