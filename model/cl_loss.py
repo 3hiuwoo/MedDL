@@ -127,7 +127,7 @@ def moco_loss(q, k, queue):
     return loss
 
 
-def xtnet_loss(view1, view2):
+def ntxent_loss(view1, view2):
     norm1 = view1.norm(dim=1).unsqueeze(0)
     norm2 = view2.norm(dim=1).unsqueeze(0)
     sim_matrix = torch.mm(view1, view2.transpose(0,1))

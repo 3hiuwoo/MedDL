@@ -4,7 +4,7 @@ from datetime import datetime
 from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
 from model.encoder import TSEncoder, CLEncoder
-from model.cl_loss import xtnet_loss
+from model.cl_loss import ntxent_loss
 from utils import shuffle_feature_label
 from utils import MyBatchSampler
 
@@ -109,7 +109,7 @@ class SimCLR:
                 optimizer.zero_grad()
                 
                 views = self._net(x, masks=masks)
-                loss = xtnet_loss(views[0], views[1])
+                loss = ntxent_loss(views[0], views[1])
                 loss.backward()
                 optimizer.step()
                 self.net.update_parameters(self._net.encoder)

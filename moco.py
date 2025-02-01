@@ -6,7 +6,7 @@ from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
 from model.encoder import TSEncoder
 from model.cl_loss import moco_loss
-from utils import shuffle_feature_label, MyBatchSampler
+from utils import shuffle_feature_label, MyBatchSampler, rotation_transform_vectorized
 
 
 class MoCo:
@@ -98,7 +98,7 @@ class MoCo:
             Returns:
                 epoch_loss_list: a list containing the training losses on each epoch.
             '''
-            assert X.ndim == 4
+            assert X.ndim == 3
             assert y.shape[1] == 3
             # Shuffle the training set for contrastive learning pretraining.
             X, y = shuffle_feature_label(X, y, shuffle_function=shuffle_function, batch_size=self.batch_size)
@@ -125,9 +125,8 @@ class MoCo:
                 cum_loss = 0
                 for x, y in tqdm(train_loader, desc=f'=> Epoch {epoch+1}', leave=False):
                     # count by iterations
-                    x = x.to(self.device)
-                    x = x.permute(1, 0, 2, 3)
-                    x1, x2 = x[0], x[1]
+                    x1 = x.to(self.device)
+                    x2 = rotation_transform_vectorized(x.numpy()).to(self.device)
                     
                     with torch.no_grad():
                         self._momentum_update_key_encoder()

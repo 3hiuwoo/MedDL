@@ -8,13 +8,7 @@ import random
 import os
 import sys
 import numpy as np
-import pandas as pd
-import neurokit2 as nk
-from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
-from scipy import interpolate
-from scipy.signal import butter, lfilter
-from itertools import repeat
 from torch.utils.data import BatchSampler
 
 
@@ -180,211 +174,43 @@ def batch_shuffle_feature_label(X, y, batch_size=256):
     return X_shuffled, y_shuffled
 
   
-def resample(data, freq1=500, freq2=250, kind='linear'):
-    '''
-    resample the data from freq1 to freq2
-    '''
-    t = np.linspace(1, len(data), len(data))
-    f = interpolate.interp1d(t, data, kind=kind)
-    t_new = np.linspace(1, len(data), int(len(data)/freq1 * freq2))
-    new_data = f(t_new)
-    return new_data
+def rotation_transform_vectorized(X):
+    """
+    Applying a random 3D rotation
+    """
+    axes = np.random.uniform(low=-1, high=1, size=(X.shape[0], X.shape[2]))
+    angles = np.random.uniform(low=-np.pi, high=np.pi, size=(X.shape[0]))
+    matrices = axis_angle_to_rotation_matrix_3d_vectorized(axes, angles)
 
- 
-def normalize(data):
-    '''
-    normalize the data by x=x-mean/std
-    '''
-    scaler = StandardScaler()
-    norm_data = scaler.fit_transform(data)
-    return norm_data
+    return np.matmul(X, matrices)
 
 
-def R_Peaks(ecg):
-    '''
-    extract the R Peaks from the ECG signal
-    '''
-    # get R Peak positions
-    pos = []
-    # get R Peak intervals
-    trial_interval = []
-    for ch in range(ecg.shape[1]):
-        cleaned_ecg = nk.ecg_clean(ecg[:, ch], sampling_rate=250, method='neurokit')
-        signals, _ = nk.ecg_peaks(cleaned_ecg, sampling_rate=250, correct_artifacts=False)
-        peaks = signals[signals['ECG_R_Peaks']==1].index.to_list()
-        pos.append(peaks)
-        channel_interval = []
-        for i in range(len(peaks)-1):
-            channel_interval.append(peaks[i+1] - peaks[i])
-        trial_interval.append(channel_interval)
-        
-    df_peaks = pd.DataFrame(pos) # [num of the R-Peaks of a channel]
-    df = pd.DataFrame(trial_interval).T
-    med = df.median()
-    return df, med, df_peaks
-    
-    
-def trial2sample(data, max_duration=300):
-    '''
-    split resampled trial to sample level(single heartbeat)
-    '''
-    samples = []
-    _, med, df_peaks = R_Peaks(data)
-    trial_med = med.median()
-    for i in range(df_peaks.shape[1]):
-        RP_pos = df_peaks.iloc[:, i].median()
-        beat = data[max(0,int(RP_pos)-int(trial_med/2)):min(int(RP_pos)+int(trial_med/2),data.shape[0]), :]
-        left_zero_num = int((int(max_duration)-beat.shape[0])/2)
-        padding_left = np.zeros((left_zero_num, data.shape[1]))
-        padding_right = np.zeros((int(max_duration)-left_zero_num-beat.shape[0], data.shape[1]))
-        beat = np.concatenate([padding_left, beat, padding_right], axis=0)
-        samples.append(beat)
-    return samples 
+def axis_angle_to_rotation_matrix_3d_vectorized(axes, angles):
+    """
+    Get the rotational matrix corresponding to a rotation of (angle) radian around the axes
+
+    Reference: the Transforms3d package - transforms3d.axangles.axangle2mat
+    Formula: http://en.wikipedia.org/wiki/Rotation_matrix#Axis_and_angle
+    """
+    axes = axes / np.linalg.norm(axes, ord=2, axis=1, keepdims=True)
+    x = axes[:, 0]; y = axes[:, 1]; z = axes[:, 2]
+    c = np.cos(angles)
+    s = np.sin(angles)
+    C = 1 - c
+
+    xs = x*s;   ys = y*s;   zs = z*s
+    xC = x*C;   yC = y*C;   zC = z*C
+    xyC = x*yC; yzC = y*zC; zxC = z*xC
+
+    m = np.array([
+        [ x*xC+c,   xyC-zs,   zxC+ys ],
+        [ xyC+zs,   y*yC+c,   yzC-xs ],
+        [ zxC-ys,   yzC+xs,   z*zC+c ]])
+    matrix_transposed = np.transpose(m, axes=(2,0,1))
+    return matrix_transposed
 
 
-def sample2trial(samples, size=10):
-    '''
-    concat samples to pseudo-trials
-    '''
-    trials = []
-    idx = 0
-    while idx <= len(samples)-size:
-        beat = samples[idx]
-        for i in range(idx+1, idx+size):
-            beat = np.vstack((beat, samples[i]))
-        trials.append(beat)
-        idx += size
-    return trials
 
-
-def segment(X, y, sample):
-    '''
-    segment the trial to non-overlapping samples
-    '''
-    length = X.shape[1]
-    assert length % sample == 0
-    nsample = length / sample
-    
-    samples = X.reshape(-1, sample, X.shape[-1])
-    tids = np.repeat(np.arange(y.shape[0])+1, nsample)
-    labels = np.repeat(y, nsample, axis=0)
-    labels = np.hstack([labels, tids.reshape(labels.shape[0], -1)])
-    return samples, labels
-
-
-def butter_bandpass(lowcut, highcut, fs, order=5):
-    nyq = 0.5 * fs
-    low = lowcut / nyq
-    high = highcut / nyq
-    b, a = butter(order, [low, high], btype='band')
-    return b, a
-
-
-def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
-    ''' see https://stackoverflow.com/questions/12093594/how-to-implement-band-pass-butterworth-filter-with-scipy-signal-butter
-
-    '''
-    b, a = butter_bandpass(lowcut, highcut, fs, order=order)
-    y = lfilter(b, a, data, axis=0)
-    return y
-
-
-def process_ts(ts, fs, normalized=True, bandpass_filter=False):
-    ''' preprocess a time-series data
-
-    Args:
-        ts (numpy.ndarray): The input time-series in shape (timestamps, feature).
-        fs (float): The sampling frequency for bandpass filtering.
-        normalized (bool): Whether to normalize the time-series data.
-        bandpass_filter (bool): Whether to filter the time-series data.
-
-    Returns:
-        ts (numpy.ndarray): The processed time-series.
-    '''
-
-    if bandpass_filter:
-        ts = butter_bandpass_filter(ts, 0.5, 50, fs, 5)
-    if normalized:
-        scaler = StandardScaler()
-        scaler.fit(ts)
-        ts = scaler.transform(ts)
-    return ts
-
-
-def process_batch_ts(batch, fs=256, normalized=True, bandpass_filter=False):
-    ''' preprocess a batch of time-series data
-
-    Args:
-        batch (numpy.ndarray): A batch of input time-series in shape (n_samples, timestamps, feature).
-
-    Returns:
-        A batch of processed time-series.
-    '''
-
-    bool_iterator_1 = repeat(fs, len(batch))
-    bool_iterator_2 = repeat(normalized, len(batch))
-    bool_iterator_3 = repeat(bandpass_filter, len(batch))
-    return np.array(list(map(process_ts, batch, bool_iterator_1, bool_iterator_2, bool_iterator_3)))
-
-
-def split_data_label(X_trial, y_trial, sample_timestamps, overlapping):
-    ''' split a batch of time-series trials into samples and adding trial ids to the label array y
-
-    Args:
-        X_trial (numpy.ndarray): It should have a shape of (n_trials, trial_timestamps, features) B_trial x T_trial x C.
-        y_trial (numpy.ndarray): It should have a shape of (n_trials, 2). The first column is the label and the second column is patient id.
-        sample_timestamps (int): The length for sample-level data (T_sample).
-        overlapping (float): How many overlapping for each sample-level data in a trial.
-
-    Returns:
-        X_sample (numpy.ndarray): It should have a shape of (n_samples, sample_timestamps, features) B_sample x T_sample x C. The B_sample = B x sample_num.
-        y_sample (numpy.ndarray): It should have a shape of (n_samples, 3). The three columns are the label, patient id, and trial id.
-    '''
-    X_sample, trial_ids, sample_num = split_data(X_trial, sample_timestamps, overlapping)
-    # all samples from same trial should have same label and patient id
-    y_sample = np.repeat(y_trial, repeats=sample_num, axis=0)
-    # append trial ids. Segments split from same trial should have same trial ids
-    label_num = y_sample.shape[0]
-    y_sample = np.hstack((y_sample.reshape((label_num, -1)), trial_ids.reshape((label_num, -1))))
-    X_sample, y_sample = shuffle(X_sample, y_sample, random_state=42)
-    return X_sample, y_sample
-
-
-def split_data(X_trial, sample_timestamps=256, overlapping=0.5):
-    ''' split a batch of trials into samples and mark their trial ids
-
-    Args:
-        See split_data_label() function
-
-    Returns:
-        X_sample (numpy.ndarray): (n_samples, sample_timestamps, feature).
-        trial_ids (numpy.ndarray): (n_samples,)
-        sample_num (int): one trial splits into sample_num of samples
-    '''
-    length = X_trial.shape[1]
-    # check if sub_length and overlapping compatible
-    if overlapping:
-        assert (length - (1-overlapping)*sample_timestamps) % (sample_timestamps*overlapping) == 0
-        sample_num = (length - (1 - overlapping) * sample_timestamps) / (sample_timestamps * overlapping)
-    else:
-        assert length % sample_timestamps == 0
-        sample_num = length / sample_timestamps
-    sample_feature_list = []
-    trial_id_list = []
-    trial_id = 1
-    for trial in X_trial:
-        counter = 0
-        # ex. split one trial(5s, 1280 timestamps) into 9 half-overlapping samples (1s, 256 timestamps)
-        while counter*sample_timestamps*(1-overlapping)+sample_timestamps <= trial.shape[0]:
-            sample_feature = trial[int(counter*sample_timestamps*(1-overlapping)):int(counter*sample_timestamps*(1-overlapping)+sample_timestamps)]
-            # print(f"{int(counter*length*(1-overlapping))}:{int(counter*length*(1-overlapping)+length)}")
-            sample_feature_list.append(sample_feature)
-            trial_id_list.append(trial_id)
-            counter += 1
-        trial_id += 1
-    X_sample, trial_ids = np.array(sample_feature_list), np.array(trial_id_list)
-
-    return X_sample, trial_ids, sample_num
 
         
     
