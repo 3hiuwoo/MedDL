@@ -42,7 +42,7 @@ def main():
     seed_everything(args.seed)
     print(f'=> Set seed to {args.seed}')
     
-    X_train, _, _, y_train, _, _ = load_data(args.root, args.data, length=args.length, overlap=args.overlap, shuffle=True, task='cmsc')
+    X_train, _, _, y_train, _, _ = load_data(args.root, args.data, length=args.length, overlap=args.overlap, task='cmsc')
     
     device = get_device()
     print(f'=> Running on {device}')
