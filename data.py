@@ -47,6 +47,10 @@ def load_data(root='dataset', name='chapman', length=None, overlap=0, norm=True,
     y_val = np.array(valid_labels)
     y_test = np.array(test_labels)
     
+    X_train = X_train[..., [1, 3, 4, 7]]
+    X_val = X_val[..., [1, 3, 4, 7]]
+    X_test = X_test[..., [1, 3, 4, 7]]
+    
     if shuff:
         X_train, y_train = shuffle(X_train, y_train)
         X_val, y_val = shuffle(X_val, y_val)
@@ -65,12 +69,12 @@ def load_data(root='dataset', name='chapman', length=None, overlap=0, norm=True,
         X_train, y_train = split_data_label(X_train, y_train, sample_timestamps=length, overlapping=overlap)
         X_val, y_val = split_data_label(X_val, y_val, sample_timestamps=length, overlapping=overlap)
         X_test, y_test = split_data_label(X_test, y_test, sample_timestamps=length, overlapping=overlap)
-        
+    
     if task == 'cmsc':
         X_train, y_train = cmsc_split(X_train, y_train)
         
     elif task == 'cmsmlc':
-        X_train, y_train = cmsmlc_split(X_train, y_train) 
+        X_train, y_train = cmsmlc_split(X_train[..., :4], y_train) 
         
     elif task == 'cmlc':
         X_train, y_train = cmlc_split(X_train, y_train)   

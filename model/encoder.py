@@ -90,13 +90,19 @@ class FTClassifier(nn.Module):
 
 
     def forward(self, x):
-        out = self.net(x)  # B x O x Co
-        out = F.max_pool1d(
-            out.transpose(1, 2),
-            kernel_size=out.size(1),
-        ).transpose(1, 2)  # B x 1 x Co
-        out = out.squeeze(1)  # B x Co
-        x = self.proj_head(out)  # B x Cp
+        sum = None
+        for i in range(x.size(-1)):
+            out = self.net(x[..., i].unsqueeze(-1))  # B x O x Co
+            out = F.max_pool1d(
+                out.transpose(1, 2),
+                kernel_size=out.size(1),
+            ).transpose(1, 2)  # B x 1 x Co
+            out = out.squeeze(1)  # B x Co
+            if sum is None:
+                sum = out
+            else:
+                sum += out
+        x = self.proj_head(sum)  # B x Cp
         if self.p_output_dims == 2:  # binary or multi-class
             return torch.sigmoid(x)
         else:
