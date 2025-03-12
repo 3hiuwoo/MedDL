@@ -47,9 +47,10 @@ def load_data(root='dataset', name='chapman', length=None, overlap=0, norm=True,
     y_val = np.array(valid_labels)
     y_test = np.array(test_labels)
     
-    X_train = X_train[..., [1, 3, 4, 7]]
-    X_val = X_val[..., [1, 3, 4, 7]]
-    X_test = X_test[..., [1, 3, 4, 7]]
+    if X_train.shape[-1] > 1:
+        X_train = X_train[..., [1, 3, 4, 7]]
+        X_val = X_val[..., [1, 3, 4, 7]]
+        X_test = X_test[..., [1, 3, 4, 7]]
     
     if shuff:
         X_train, y_train = shuffle(X_train, y_train)
