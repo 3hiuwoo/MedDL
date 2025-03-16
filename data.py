@@ -1,18 +1,15 @@
 import os
 import numpy as np
 from tqdm import tqdm
-from sklearn.utils import shuffle
+from sklearn.preprocessing import StandardScaler
 from scipy.signal import butter, lfilter
 from itertools import repeat
-from sklearn.preprocessing import StandardScaler
-
-
-def load_data(root='dataset', name='chapman', length=None, overlap=0, norm=True, shuff=True, task=None):
-    '''
-    load and preprocess data
+    
+def load_data(root='dataset', name='chapman', length=None, overlap=0, norm=True):
+    ''' load and preprocess data
     '''
     data_path = os.path.join(root, name, 'feature')
-    labels, train_ids, valid_ids, test_ids = load_label_split(root, name)
+    labels, train_ids, valid_ids, test_ids = load_split_ids(root, name)
     
     filenames = []
     for fn in os.listdir(data_path):
@@ -47,16 +44,11 @@ def load_data(root='dataset', name='chapman', length=None, overlap=0, norm=True,
     y_val = np.array(valid_labels)
     y_test = np.array(test_labels)
     
-    if X_train.shape[-1] > 1:
-        X_train = X_train[..., [1, 3, 4, 7]]
-        X_val = X_val[..., [1, 3, 4, 7]]
-        X_test = X_test[..., [1, 3, 4, 7]]
-    
-    if shuff:
-        X_train, y_train = shuffle(X_train, y_train)
-        X_val, y_val = shuffle(X_val, y_val)
-        X_test, y_test = shuffle(X_test, y_test)
-    
+    if name == 'ptb':
+        X_train = X_train[:, :, :12]
+        X_val = X_val[:, :, :12]
+        X_test = X_test[:, :, :12]
+
     if norm:
         X_train = process_batch_ts(X_train, normalized=True, bandpass_filter=False)
         X_val = process_batch_ts(X_val, normalized=True, bandpass_filter=False)
@@ -66,24 +58,15 @@ def load_data(root='dataset', name='chapman', length=None, overlap=0, norm=True,
         # X_train, y_train = segment(X_train, y_train, split)
         # X_val, y_val = segment(X_val, y_val, split)
         # X_test, y_test = segment(X_test, y_test, split)
-        
         X_train, y_train = split_data_label(X_train, y_train, sample_timestamps=length, overlapping=overlap)
         X_val, y_val = split_data_label(X_val, y_val, sample_timestamps=length, overlapping=overlap)
         X_test, y_test = split_data_label(X_test, y_test, sample_timestamps=length, overlapping=overlap)
-    
-    if task == 'cmsc':
-        X_train, y_train = cmsc_split(X_train, y_train)
         
-    elif task == 'cmsmlc':
-        X_train, y_train = cmsmlc_split(X_train[..., :4], y_train) 
-        
-    elif task == 'cmlc':
-        X_train, y_train = cmlc_split(X_train, y_train)   
     
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 
-def load_label_split(root='dataset', name='chapman'):
+def load_split_ids(root='dataset', name='chapman'):
     '''
     load labels for dataset and split information
     '''
@@ -118,40 +101,38 @@ def load_label_split(root='dataset', name='chapman'):
         train_ids = pids_norm[:-1200] + pids_mi[:-600] + pids_sttc[:-600] + pids_cd[:-400] + pids_hyp[:-200]
         val_ids = pids_norm[-1200:-600] + pids_mi[-600:-300] + pids_sttc[-600:-300] + pids_cd[-400:-200] + pids_hyp[-200:-100]
         test_ids = pids_norm[-600:] + pids_mi[-300:] + pids_sttc[-300:] + pids_cd[-200:] + pids_hyp[-100:]
+    
+    elif name == 'cpsc2018':
+        labels[:, 0] -= 1
+        
+        pids_Normal = list(labels[np.where(labels[:, 0] == 0)][:, 1])
+        pids_AF = list(labels[np.where(labels[:, 0] == 1)][:, 1])
+        pids_IAVB = list(labels[np.where(labels[:, 0] == 2)][:, 1])
+        pids_LBBB = list(labels[np.where(labels[:, 0] == 3)][:, 1])
+        pids_RBBB = list(labels[np.where(labels[:, 0] == 4)][:, 1])
+        pids_PAC = list(labels[np.where(labels[:, 0] == 5)][:, 1])
+        pids_PVC = list(labels[np.where(labels[:, 0] == 6)][:, 1])
+        pids_STD = list(labels[np.where(labels[:, 0] == 7)][:, 1])
+        pids_STE = list(labels[np.where(labels[:, 0] == 8)][:, 1])
+
+        train_ids = pids_Normal[:-300] + pids_AF[:-300] + pids_IAVB[:-300] + pids_LBBB[:-100] + pids_RBBB[:-300] + pids_PAC[:-300] + pids_PVC[:-300] + pids_STD[:-300] + pids_STE[:-100]
+        val_ids = pids_Normal[-300:-150] + pids_AF[-300:-150] + pids_IAVB[-300:-150] + pids_LBBB[-100:-50] + pids_RBBB[-300:-150] + pids_PAC[-300:-150] + pids_PVC[-300:-150] + pids_STD[-300:-150] + pids_STE[-100:-50]
+        test_ids = pids_Normal[-150:] + pids_AF[-150:] + pids_IAVB[-150:] + pids_LBBB[-50:] + pids_RBBB[-150:] + pids_PAC[-150:] + pids_PVC[-150:] + pids_STD[-150:] + pids_STE[-50:]
+    
+    elif name == 'cinc2017':
+        pids_n = list(labels[np.where(labels[:, 0]==0)][:, 1])
+        pids_a = list(labels[np.where(labels[:, 0]==1)][:, 1])
+        pids_o = list(labels[np.where(labels[:, 0]==2)][:, 1])
+        
+        # val 50 50 50 test 300 300 300
+        train_ids = pids_n[:-900] + pids_a[:-300] + pids_o[:-800]
+        val_ids = pids_n[-900:-450] + pids_a[-300:-150] + pids_o[-800:-400]
+        test_ids = pids_n[-450:] + pids_a[-150:] + pids_o[-400:]
         
     else:
         raise ValueError(f'Unknown dataset: {name}')
         
     return labels, train_ids, val_ids, test_ids
-        
-
-def cmsc_split(x, y):
-    length = x.shape[1]
-    nleads = x.shape[-1]
-    assert length % 2 == 0
-    
-    x = x.transpose(2, 0, 1).reshape(-1, 2, int(length/2), 1)
-    y = np.tile(y, (nleads, 1))
-    
-    return x, y
-
-
-def cmsmlc_split(x, y):
-    length = x.shape[1]
-    batch_size = x.shape[0]
-    assert length % 2 == 0
-    
-    x = x.transpose(0, 2, 1).reshape(batch_size, -1, int(length/2), 1)
-    
-    return x, y
-
-
-def cmlc_split(x, y):
-    length = x.shape[1]
-    batch_size = x.shape[0]
-    x = x.transpose(0, 2, 1).reshape(batch_size, -1, length, 1)
-    
-    return x, y
 
 
 def butter_bandpass(lowcut, highcut, fs, order=5):
@@ -228,7 +209,7 @@ def split_data_label(X_trial, y_trial, sample_timestamps, overlapping):
     # append trial ids. Segments split from same trial should have same trial ids
     label_num = y_sample.shape[0]
     y_sample = np.hstack((y_sample.reshape((label_num, -1)), trial_ids.reshape((label_num, -1))))
-    X_sample, y_sample = shuffle(X_sample, y_sample, random_state=42)
+    # X_sample, y_sample = shuffle(X_sample, y_sample)
     return X_sample, y_sample
 
 
@@ -267,3 +248,4 @@ def split_data(X_trial, sample_timestamps=256, overlapping=0.5):
     X_sample, trial_ids = np.array(sample_feature_list), np.array(trial_id_list)
 
     return X_sample, trial_ids, sample_num
+        
