@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler
 from scipy.signal import butter, lfilter
 from itertools import repeat
     
-def load_data(root='dataset', name='chapman', length=None, overlap=0, norm=True):
+def load_data(root='dataset', name='chapman', length=None, overlap=0, norm=True, task=None):
     ''' load and preprocess data
     '''
     data_path = os.path.join(root, name, 'feature')
@@ -44,10 +44,10 @@ def load_data(root='dataset', name='chapman', length=None, overlap=0, norm=True)
     y_val = np.array(valid_labels)
     y_test = np.array(test_labels)
     
-    if name == 'ptb':
-        X_train = X_train[:, :, :12]
-        X_val = X_val[:, :, :12]
-        X_test = X_test[:, :, :12]
+    if X_train.shape[-1] > 1:
+        X_train = X_train[..., [1, 3, 4, 7]]
+        X_val = X_val[..., [1, 3, 4, 7]]
+        X_test = X_test[..., [1, 3, 4, 7]]
 
     if norm:
         X_train = process_batch_ts(X_train, normalized=True, bandpass_filter=False)
@@ -61,6 +61,15 @@ def load_data(root='dataset', name='chapman', length=None, overlap=0, norm=True)
         X_train, y_train = split_data_label(X_train, y_train, sample_timestamps=length, overlapping=overlap)
         X_val, y_val = split_data_label(X_val, y_val, sample_timestamps=length, overlapping=overlap)
         X_test, y_test = split_data_label(X_test, y_test, sample_timestamps=length, overlapping=overlap)
+        
+    if task == 'cmsc':
+        X_train, y_train = cmsc_split(X_train, y_train)
+        
+    elif task == 'cmsmlc':
+        X_train, y_train = cmsmlc_split(X_train, y_train) 
+        
+    elif task == 'cmlc':
+        X_train, y_train = cmlc_split(X_train, y_train)
         
     
     return X_train, X_val, X_test, y_train, y_val, y_test
@@ -134,6 +143,34 @@ def load_split_ids(root='dataset', name='chapman'):
         
     return labels, train_ids, val_ids, test_ids
 
+
+def cmsc_split(x, y):
+    length = x.shape[1]
+    nleads = x.shape[-1]
+    assert length % 2 == 0
+    
+    x = x.transpose(2, 0, 1).reshape(-1, 2, int(length/2), 1)
+    y = np.tile(y, (nleads, 1))
+    
+    return x, y
+
+
+def cmsmlc_split(x, y):
+    length = x.shape[1]
+    batch_size = x.shape[0]
+    assert length % 2 == 0
+    
+    x = x.transpose(0, 2, 1).reshape(batch_size, -1, int(length/2), 1)
+    
+    return x, y
+
+
+def cmlc_split(x, y):
+    length = x.shape[1]
+    batch_size = x.shape[0]
+    x = x.transpose(0, 2, 1).reshape(batch_size, -1, length, 1)
+    
+    return x, y
 
 def butter_bandpass(lowcut, highcut, fs, order=5):
     nyq = 0.5 * fs
