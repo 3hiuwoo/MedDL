@@ -93,11 +93,6 @@ class FTClassifier(nn.Module):
         sum = None
         for i in range(x.size(-1)):
             out = self.net(x[..., i].unsqueeze(-1))  # B x O x Co
-            out = F.max_pool1d(
-                out.transpose(1, 2),
-                kernel_size=out.size(1),
-            ).transpose(1, 2)  # B x 1 x Co
-            out = out.squeeze(1)  # B x Co
             if sum is None:
                 sum = out
             else:

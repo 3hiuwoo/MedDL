@@ -115,7 +115,7 @@ def run(logdir, seed, fraction):
     print(f'=> Running on {device}')
     device = torch.device(device)
     
-    input_dims = X_test.shape[-1]
+    input_dims = 1
     num_classes = np.unique(y_test[:, 0]).shape[0]
     model = FTClassifier(
         input_dims=input_dims,
